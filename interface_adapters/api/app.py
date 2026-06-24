@@ -122,6 +122,8 @@ def build_app(settings: Settings) -> FastAPI:
     )
 
     app = FastAPI(title="Partes de Trabajo Extractor API", version=settings.service_version)
+    # Expuesto para que el worker (main_worker.py) reutilice el mismo wiring.
+    app.state.pipeline = pipeline
 
     if settings.cors_allow_origins:
         origins = _parse_origins(settings.cors_allow_origins)
