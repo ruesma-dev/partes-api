@@ -20,6 +20,7 @@ from application.services.schema_registry import SchemaRegistry
 from config.settings import Settings
 from infrastructure.llm.claude_messages_client import ClaudeMessagesVisionClient
 from infrastructure.llm.gemini_genai_client import GeminiGenAiVisionClient
+from infrastructure.llm.openai_responses_client import OpenAiResponsesVisionClient
 from infrastructure.llm.llm_call_logger import LlmCallLogger
 from infrastructure.llm.retry_policy import RetryPolicy
 from infrastructure.prompts.yaml_prompt_repository import YamlPromptRepository
@@ -53,6 +54,7 @@ def build_app(settings: Settings) -> FastAPI:
                 model_name=settings.gemini_model,
                 client=GeminiGenAiVisionClient(
                     settings.gemini_api_key,
+                    media_resolution=settings.gemini_media_resolution,
                     retry_policy=retry_policy,
                     call_logger=call_logger,
                 ),
@@ -67,6 +69,20 @@ def build_app(settings: Settings) -> FastAPI:
                     api_key=settings.anthropic_api_key,
                     max_tokens=settings.anthropic_max_tokens,
                     timeout_s=settings.anthropic_timeout_s,
+                    retry_policy=retry_policy,
+                    call_logger=call_logger,
+                ),
+            )
+        )
+    if settings.openai_enabled:
+        providers.append(
+            ProviderClientSpec(
+                provider="openai",
+                model_name=settings.openai_model,
+                client=OpenAiResponsesVisionClient(
+                    api_key=settings.openai_api_key,
+                    max_output_tokens=settings.openai_max_output_tokens,
+                    timeout_s=settings.openai_timeout_s,
                     retry_policy=retry_policy,
                     call_logger=call_logger,
                 ),

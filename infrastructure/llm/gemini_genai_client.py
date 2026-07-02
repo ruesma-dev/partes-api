@@ -24,6 +24,7 @@ class GeminiGenAiVisionClient(LlmVisionClient):
         self,
         api_key: str,
         *,
+        media_resolution: str | None = None,
         retry_policy: RetryPolicy | None = None,
         call_logger: LlmCallLogger | None = None,
     ) -> None:
@@ -31,6 +32,55 @@ class GeminiGenAiVisionClient(LlmVisionClient):
         self._retry_policy = retry_policy or RetryPolicy()
         # Logger best-effort (puede ser None si IA_LOGGING_ENABLED=false).
         self._call_logger = call_logger
+        # Resolucion de medios (Gemini 3); None = no forzar (default del SDK).
+        self._media_resolution = self._resolve_media_resolution(media_resolution)
+
+    @staticmethod
+    def _resolve_media_resolution(value: str | None) -> Any | None:
+        """Mapea un string de configuracion a types.MediaResolution.
+
+        Devuelve None (no forzar resolucion) para "default"/"unspecified"/
+        vacio, o si el SDK instalado no soporta el parametro. Asi el
+        comportamiento por defecto no cambia ni consume tokens extra.
+        """
+        token = (value or "").strip().lower()
+        if token in ("", "default", "unspecified",
+                     "media_resolution_unspecified"):
+            return None
+        enum_cls = getattr(types, "MediaResolution", None)
+        cfg_cls = getattr(types, "GenerateContentConfig", None)
+        supported = (
+            enum_cls is not None
+            and cfg_cls is not None
+            and "media_resolution" in getattr(cfg_cls, "model_fields", {})
+        )
+        if not supported:
+            logger.warning(
+                "GEMINI_MEDIA_RESOLUTION=%s ignorado: el SDK google-genai "
+                "instalado no soporta el parametro media_resolution.",
+                value,
+            )
+            return None
+        mapping = {
+            "low": "MEDIA_RESOLUTION_LOW",
+            "medium": "MEDIA_RESOLUTION_MEDIUM",
+            "med": "MEDIA_RESOLUTION_MEDIUM",
+            "high": "MEDIA_RESOLUTION_HIGH",
+            "media_resolution_low": "MEDIA_RESOLUTION_LOW",
+            "media_resolution_medium": "MEDIA_RESOLUTION_MEDIUM",
+            "media_resolution_high": "MEDIA_RESOLUTION_HIGH",
+        }
+        member = mapping.get(token)
+        resolved = getattr(enum_cls, member, None) if member else None
+        if resolved is None:
+            logger.warning(
+                "GEMINI_MEDIA_RESOLUTION=%s no reconocido; se usa el valor "
+                "por defecto del SDK.",
+                value,
+            )
+            return None
+        logger.info("Gemini media_resolution=%s", member)
+        return resolved
 
     def extract_document(
         self,
@@ -63,6 +113,24 @@ class GeminiGenAiVisionClient(LlmVisionClient):
             response_schema=response_schema,
         )
 
+        # Orden recomendado por Gemini para 1 documento + texto: primero el
+        # texto, luego el adjunto.
+        contents = [
+            user_text,
+            types.Part.from_bytes(
+                data=attachment.data,
+                mime_type=attachment.mime_type,
+            ),
+        ]
+        config_kwargs: dict[str, Any] = {
+            "system_instruction": instructions,
+            "response_mime_type": "application/json",
+            "response_json_schema": response_schema,
+        }
+        if self._media_resolution is not None:
+            config_kwargs["media_resolution"] = self._media_resolution
+        config = types.GenerateContentConfig(**config_kwargs)
+
         response = None
         error_str: str | None = None
         t0 = time.time()
@@ -71,18 +139,8 @@ class GeminiGenAiVisionClient(LlmVisionClient):
                 provider="gemini",
                 operation=lambda: self._client.models.generate_content(
                     model=model,
-                    contents=[
-                        types.Part.from_bytes(
-                            data=attachment.data,
-                            mime_type=attachment.mime_type,
-                        ),
-                        user_text,
-                    ],
-                    config=types.GenerateContentConfig(
-                        system_instruction=instructions,
-                        response_mime_type="application/json",
-                        response_json_schema=response_schema,
-                    ),
+                    contents=contents,
+                    config=config,
                 ),
                 policy=self._retry_policy,
             )

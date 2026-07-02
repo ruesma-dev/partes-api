@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ProviderName = Literal["gemini", "claude"]
+ProviderName = Literal["gemini", "claude", "openai"]
 
 
 class Settings(BaseSettings):
@@ -20,14 +20,26 @@ class Settings(BaseSettings):
     # --- Flags de proveedor --- #
     gemini_enabled: bool = Field(True, alias="ENABLE_GEMINI")
     claude_enabled: bool = Field(False, alias="ENABLE_CLAUDE")
+    openai_enabled: bool = Field(False, alias="ENABLE_OPENAI")
 
     gemini_api_key: str | None = Field(None, alias="GEMINI_API_KEY")
     gemini_model: str = Field("gemini-2.5-flash", alias="GEMINI_MODEL")
+    # Resolucion de medios (Gemini 3). Valores: default|unspecified|low|medium|high.
+    # "default" deja decidir al SDK (NO fuerza tokens extra). "high" mejora la
+    # lectura de manuscritos finos pero sube tokens/pagina y consumo de cuota.
+    gemini_media_resolution: str = Field("default", alias="GEMINI_MEDIA_RESOLUTION")
 
     anthropic_api_key: str | None = Field(None, alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field("claude-sonnet-4-5", alias="ANTHROPIC_MODEL")
     anthropic_max_tokens: int = Field(8192, alias="ANTHROPIC_MAX_TOKENS")
     anthropic_timeout_s: int = Field(120, alias="ANTHROPIC_TIMEOUT_S")
+
+    openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
+    openai_model: str = Field("gpt-4o", alias="OPENAI_MODEL")
+    openai_max_output_tokens: int | None = Field(
+        None, alias="OPENAI_MAX_OUTPUT_TOKENS"
+    )
+    openai_timeout_s: int = Field(120, alias="OPENAI_TIMEOUT_S")
 
     # --- Proveedor activo y prompt --- #
     ia_provider: ProviderName = Field("gemini", alias="IA_PROVIDER")
@@ -101,6 +113,7 @@ class Settings(BaseSettings):
         flag_by_provider = {
             "gemini": self.gemini_enabled,
             "claude": self.claude_enabled,
+            "openai": self.openai_enabled,
         }
         if not flag_by_provider.get(self.ia_provider, False):
             raise ValueError(
@@ -111,4 +124,6 @@ class Settings(BaseSettings):
             raise ValueError("IA_PROVIDER=gemini requiere GEMINI_API_KEY.")
         if self.ia_provider == "claude" and not (self.anthropic_api_key or "").strip():
             raise ValueError("IA_PROVIDER=claude requiere ANTHROPIC_API_KEY.")
+        if self.ia_provider == "openai" and not (self.openai_api_key or "").strip():
+            raise ValueError("IA_PROVIDER=openai requiere OPENAI_API_KEY.")
         return self
