@@ -69,6 +69,9 @@ class EmpleadoParte(StrictSchemaModel):
     numero_linea: Optional[int] = None
     categoria: Optional[str] = None        # Capataz, Oficial 1a, Peon...
     nombre: Optional[str] = None
+    # DNI/NIE de la columna "DNI" (plantillas J.310 rev. 1+; impreso o
+    # manuscrito). None si el parte no tiene esa columna o esta vacia.
+    dni: Optional[str] = None
 
     horas_ordinarias: Optional[float] = None
     horas_extraordinarias: Optional[float] = None

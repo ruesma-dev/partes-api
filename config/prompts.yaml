@@ -64,6 +64,12 @@ parte_trabajo_es:
        - categoria: la "Categoria" (Capataz, Oficial 1ª, Oficial 2ª, Peon,
          Ayudante, etc.) tal cual, o null.
        - nombre: el "NOMBRE" completo del trabajador.
+       - dni: el DNI/NIE de la columna "DNI", SOLO si el parte tiene esa
+         columna (plantillas nuevas; puede venir impreso o manuscrito).
+         Copialo TAL CUAL: digitos y letra final, sin espacios ni guiones
+         (ej. "28869109T"). Si el parte no tiene columna DNI o la casilla
+         esta vacia o es ilegible: null. NUNCA lo inventes ni lo deduzcas
+         del nombre.
        - horas_ordinarias: el numero de horas de la SUBCOLUMNA IZQUIERDA
          "Ord." (ordinarias/normales). null si esa subcolumna esta vacia.
        - horas_extraordinarias: el numero de horas de la SUBCOLUMNA DERECHA
@@ -100,9 +106,15 @@ parte_trabajo_es:
 
     5) PARTIDAS (por empleado): si la seccion derecha "ASIGNACION DEL PERSONAL
        POR PARTIDAS DEL PRESUPUESTO" tiene datos para ese empleado, rellena
-       empleados[].partidas[] con objetos { partida, horas } (codigo o
-       descripcion de la partida + horas asignadas). Si no hay reparto, deja la
-       lista vacia.
+       empleados[].partidas[] con objetos { partida, horas }:
+       - partida: el CODIGO tal cual esta escrito, con sus puntos y digitos
+         (ej. "03.09", "05.04"). Si en vez de codigo hay una descripcion,
+         copiala tal cual. NUNCA lo inventes ni lo completes.
+       - horas: el numero de la casilla "Horas" INMEDIATAMENTE a la izquierda
+         de esa partida. Si esa casilla esta VACIA, horas=null (significa que
+         TODAS las horas del empleado van a esa partida). No repartas ni
+         calcules tu: copia lo que veas.
+       Si no hay reparto, deja la lista vacia.
 
     6) CODIGO DE HORA DE SIGRID (propuesta): si al final de estas
        instrucciones se incluye un "CATALOGO DE CODIGOS DE HORA DE SIGRID",

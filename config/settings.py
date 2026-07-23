@@ -22,6 +22,21 @@ class Settings(BaseSettings):
     claude_enabled: bool = Field(False, alias="ENABLE_CLAUDE")
     openai_enabled: bool = Field(False, alias="ENABLE_OPENAI")
 
+    # --- Azure Storage (colas/blobs del pipeline). En Azure las inyecta la
+    # Container App; en local se leen del .env como el resto de config. --- #
+    # Connection strings para LOCAL (Azurite o cuenta con clave). Si estan,
+    # MANDAN sobre las account_url + identidad. BLOBS se deriva de COLAS si
+    # falta (Azurite: puerto 10001 -> 10000).
+    colas_connection_string: str | None = Field(
+        None, alias="COLAS_CONNECTION_STRING"
+    )
+    blobs_connection_string: str | None = Field(
+        None, alias="BLOBS_CONNECTION_STRING"
+    )
+
+    colas_account_url: str | None = Field(None, alias="COLAS_ACCOUNT_URL")
+    blobs_account_url: str | None = Field(None, alias="BLOBS_ACCOUNT_URL")
+
     gemini_api_key: str | None = Field(None, alias="GEMINI_API_KEY")
     gemini_model: str = Field("gemini-2.5-flash", alias="GEMINI_MODEL")
     # Resolucion de medios (Gemini 3). Valores: default|unspecified|low|medium|high.
